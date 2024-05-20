@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Vérification de l'Éligibilité du Prêt</title>
+</head>
+<body>
+    <h1>Vérification de l'Éligibilité du Prêt</h1>
+    <form method="POST">
+        <label for="montant">Montant du Prêt (en FCFA):</label><br>
+        <input type="number" id="montant" name="montant"><br>
+        
+        <label for="echeance">Échéance (en années):</label><br>
+        <input type="number" id="echeance" name="echeance"><br>
+        
+        <label for="type_pret">Type de Prêt:</label><br>
+        <select id="type_pret" name="type_pret">
+            <option value="NA">NA</option>
+            <option value="CLICOM CCT TRESORERIE">CLICOM CCT TRESORERIE</option>
+            <option value="CLIPRO CMT EQUIPEMENT">CLIPRO CMT EQUIPEMENT</option>
+            <option value="CLICOM CMT EQUIPEMENT">CLICOM CMT EQUIPEMENT</option>
+            <option value="CLICOM CMT TRESORERIE">CLICOM CMT TRESORERIE</option>
+            <option value="CLICOM CLT CONSTRUCTION">CLICOM CLT CONSTRUCTION</option>
+            <option value="CLICOM CMT CONSTRUCTION">CLICOM CMT CONSTRUCTION</option>
+            <option value="CLIPRO CCT EQUIPEMENT">CLIPRO CCT EQUIPEMENT</option>
+            <option value="CLIPRO CLT EQUIPEMENT">CLIPRO CLT EQUIPEMENT</option>
+            <option value="C.M.T. CONSTRUCTION ADMINIST.">C.M.T. CONSTRUCTION ADMINIST.</option>
+            <option value="CLICOM CMT DIVERS">CLICOM CMT DIVERS</option>
+            <option value="CLICOM CCT EQUIPEMENT">CLICOM CCT EQUIPEMENT</option>
+        </select><br>
+        
+        <label for="objet_pret">Objet du Prêt:</label><br>
+        <select id="objet_pret" name="objet_pret">
+            <option value="NA">NA</option>
+            <option value="Financement Treso">Financement Treso</option>
+            <option value="Financement Exploitation">Financement Exploitation</option>
+        </select><br>
+        
+        <input type="submit" value="Vérifier">
+    </form>
+    {% if resultat %}
+    <h2>Résultat: {{ resultat }}</h2>
+    {% endif %}
+</body>
+</html>

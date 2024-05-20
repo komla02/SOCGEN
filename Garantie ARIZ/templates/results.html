@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Résultats de l'Éligibilité</title>
+</head>
+<body>
+    <h1>Clients Éligibles</h1>
+    {{ eligible_clients | safe }}
+    
+    <h1>Clients Non Éligibles</h1>
+    {{ ineligible_clients | safe }}
+
+    <h2>Récapitulatif des Commissions</h2>
+    <form method="GET" action="{{ url_for('recap') }}">
+        <input type="hidden" name="filename" value="{{ request.path.split('/')[-1] }}">
+        <input type="submit" value="Voir Récapitulatif">
+    </form>
+</body>
+</html>
