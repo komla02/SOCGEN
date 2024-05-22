@@ -1,0 +1,61 @@
+Sub PreparerEmails()
+    Dim OutlookApp As Object
+    Dim OutlookMail As Object
+    Dim i As Integer
+    Dim DerniereLigne As Long
+    Dim EmailClient As String
+    Dim NomClient As String
+    Dim CorpsEmail As String
+    Dim Signature As String
+    Dim Feuille As Worksheet
+    
+    ' Texte de l'email avec "Cher client" et "Société Générale Sénégal" en gras, des espaces après chaque ligne, avec taille de police augmentée
+    CorpsEmail = "<p style='font-size:14pt; font-family: Times New Roman;'><strong>Cher client,</strong>" & "<br><br>" & _
+                 "Nous espérons que ce message vous trouve en bonne santé et en sécurité." & "<br><br>" & _
+                 "En tant que partenaire privilégié de <strong>Société Générale Sénégal</strong>, nous tenons à vous remercier pour la confiance que vous nous accordez. Nous sommes constamment à la recherche de moyens pour vous offrir une valeur ajoutée et nous sommes ravis de vous présenter une offre exclusive pour vous et vos employés." & "<br><br>" & _
+                 "Nous avons conçu des packs de produits bancaires spécialement pour vous, avec des conditions préférentielles sur les taux d'intérêt. Ces packs comprennent une gamme de produits et services qui répondent à vos besoins financiers et ceux de vos employés." & "<br><br>" & _
+                 "En tant que client Entreprise de <strong>Société Générale Sénégal</strong> vous et vos employés bénéficierez de :" & "<br><br>" & _
+                 "Des taux d'intérêt préférentiels" & "<br><br>" & _
+                 "Des conditions avantageuses sur nos packs de produits" & "<br><br>" & _
+                 "• Une équipe dédiée pour répondre à toutes vos questions" & "<br><br>" & _
+                 "Nous sommes convaincus que cette offre ajoutera une valeur significative à votre entreprise et à vos employés. Vous trouverez plus de détails sur cette offre dans la pièce jointe." & "<br><br>" & _
+                 "N'hésitez pas à nous contacter si vous avez des questions ou si vous souhaitez discuter de cette offre plus en détail. Nous sommes là pour vous aider." & "<br><br>" & _
+                 "Merci encore pour votre confiance en <strong>Société Générale Sénégal</strong>. Nous sommes impatients de continuer à vous servir." & "<br><br>" & _
+                 "Cordialement," & "<br><br>"
+
+    ' Signature avec le logo et le texte "La Direction" en gras
+    Signature = "<br><br><img src='C:\user\Logo SG.png' width='100'><br><strong>La Direction</strong></p>"
+    
+    ' Référence à la feuille contenant la liste des clients
+    Set Feuille = ThisWorkbook.Sheets("Fichier Base")
+    
+    ' Créer une instance d'Outlook
+    Set OutlookApp = CreateObject("Outlook.Application")
+    
+    ' Déterminer la dernière ligne avec des données dans la colonne A
+    DerniereLigne = Feuille.Cells(Feuille.Rows.Count, 1).End(xlUp).Row
+    
+    ' Boucle à travers chaque ligne du fichier Excel pour préparer l'email
+    For i = 2 To DerniereLigne
+        ' Lire l'adresse email du client
+        EmailClient = Feuille.Cells(i, 8).Value ' Colonne H pour l'Email Client
+        NomClient = Feuille.Cells(i, 2).Value ' Colonne B pour le Nom du Client
+        
+        ' Créer un nouvel email
+        Set OutlookMail = OutlookApp.CreateItem(0)
+        
+        ' Configurer les propriétés de l'email
+        With OutlookMail
+            .To = EmailClient
+            .Subject = "[Société Générale Sénégal] Une offre exclusive pour vous et vos employés"
+            .HTMLBody = Replace(CorpsEmail, "Cher client,", "<strong>Cher " & NomClient & ",</strong>") & Signature
+            .Save ' Sauvegarder l'email dans les brouillons
+        End With
+    Next i
+    
+    ' Libérer les objets
+    Set OutlookMail = Nothing
+    Set OutlookApp = Nothing
+    
+    MsgBox "Les emails ont été préparés et sauvegardés dans les brouillons avec succès !"
+End Sub
