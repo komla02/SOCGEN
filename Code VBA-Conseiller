@@ -1,0 +1,412 @@
+Private Sub InitializeRecapListView()
+    ' Configurer les colonnes du ListView
+    With lstRecapForcages
+        .View = lvwReport
+        .Gridlines = True
+        .FullRowSelect = True
+        .ColumnHeaders.Clear
+        .ColumnHeaders.Add , , "ID", 50 ' Ajustez la largeur des colonnes si nécessaire
+        .ColumnHeaders.Add , , "Nom Client", 150
+        .ColumnHeaders.Add , , "Montant Forcage", 100
+    End With
+End Sub
+
+Private Sub RecupererRecapForcages(CodeGestionnaire As String)
+    On Error GoTo ErrorHandler
+
+    ' Définir la chaîne de connexion à la base de données Access
+    Dim conn As Object
+    Dim rs As Object
+    Dim connectionString As String
+    Dim query As String
+
+    connectionString = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=C:\Users\user\OneDrive\Desktop\Forcage\DemandesForcage.accdb;" ' Remplacez par le chemin correct
+
+    ' Créer la connexion et le Recordset
+    Set conn = CreateObject("ADODB.Connection")
+    Set rs = CreateObject("ADODB.Recordset")
+
+    ' Ouvrir la connexion
+    conn.Open connectionString
+
+    ' Définir la requête SQL pour sélectionner les forçages du jour par code gestionnaire
+    query = "SELECT ID, NomClient, MontantForcage FROM DemandesForcage WHERE CodeGestionnaire = '" & CodeGestionnaire & "' AND DateDemande = Date()"
+
+    ' Ouvrir le Recordset
+    rs.Open query, conn, 1, 3 ' 1 = adOpenKeyset, 3 = adLockOptimistic
+
+    ' Vider le ListView
+    lstRecapForcages.ListItems.Clear
+
+    ' Remplir le ListView avec les forçages trouvés
+    Do While Not rs.EOF
+        With lstRecapForcages.ListItems.Add
+            .Text = rs.Fields("ID").Value
+            .SubItems(1) = rs.Fields("NomClient").Value
+            .SubItems(2) = FormatNumber(rs.Fields("MontantForcage").Value, 2)
+        End With
+        rs.MoveNext
+    Loop
+
+    ' Fermer le Recordset et la connexion
+    rs.Close
+    conn.Close
+
+    ' Libérer les objets
+    Set rs = Nothing
+    Set conn = Nothing
+    Exit Sub
+
+ErrorHandler:
+    MsgBox "Erreur lors de la récupération des forçages : " & Err.Description, vbCritical
+    If Not conn Is Nothing Then
+        conn.Close
+        Set conn = Nothing
+    End If
+    Set rs = Nothing
+End Sub
+Private Sub InitializeTypeOperationDropdown(cmb As MSForms.ComboBox)
+    On Error GoTo ErrorHandler
+
+    ' Définir la chaîne de connexion à la base de données Access
+    Dim conn As Object
+    Dim rs As Object
+    Dim connectionString As String
+    Dim query As String
+
+    connectionString = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=C:\Users\user\OneDrive\Desktop\Forcage\DemandesForcage.accdb;" ' Remplacez par le chemin correct
+
+    ' Créer la connexion et le Recordset
+    Set conn = CreateObject("ADODB.Connection")
+    Set rs = CreateObject("ADODB.Recordset")
+
+    ' Ouvrir la connexion
+    conn.Open connectionString
+
+    ' Définir la requête SQL pour sélectionner les types d'opérations
+    query = "SELECT DISTINCT [NomOpération] FROM TypeOperation ORDER BY [NomOpération]"
+
+    ' Ouvrir le Recordset
+    rs.Open query, conn, 1, 3 ' 1 = adOpenKeyset, 3 = adLockOptimistic
+
+    ' Vider la liste déroulante
+    cmb.Clear
+
+    ' Ajouter les types d'opérations à la liste déroulante
+    Do While Not rs.EOF
+        cmb.AddItem rs.Fields("NomOpération").Value
+        rs.MoveNext
+    Loop
+
+    ' Fermer le Recordset et la connexion
+    rs.Close
+    conn.Close
+
+    ' Libérer les objets
+    Set rs = Nothing
+    Set conn = Nothing
+    Exit Sub
+
+ErrorHandler:
+    MsgBox "Erreur lors de la récupération des types d'opérations : " & Err.Description, vbCritical
+    If Not conn Is Nothing Then
+        conn.Close
+        Set conn = Nothing
+    End If
+    Set rs = Nothing
+End Sub
+
+Private Sub UserForm_Initialize()
+    ' Fixer la taille du formulaire
+    Me.Width = 800
+    Me.Height = 600
+    
+    ' Empêcher le redimensionnement
+    Me.BorderStyle = fmBorderStyleSingle
+    ' Définir la date de la demande
+    txtDateDemande.Value = Date
+    
+    ' Initialiser les autres champs si nécessaire
+    txtNumCompteClient.Value = ""
+    txtSoldePostForcage.Value = ""
+    txtMontantDepassement.Value = ""
+    txtPourcentageDepassement.Value = ""
+    txtCommentaires.Value = ""
+    txtDureeIrregularite.Value = ""
+    
+    ' Initialiser le ListView des recap forçages
+    InitializeRecapListView
+    
+    ' Initialiser la liste déroulante des types d'opérations
+    InitializeTypeOperationDropdown cmbTypeOperation
+End Sub
+
+Private Sub txtNumCompteClient_AfterUpdate()
+    If txtNumCompteClient.Value <> "" Then
+        ' Récupérer les données pour le numéro de compte saisi
+        RecupererDonneesParNumCompteClient txtNumCompteClient.Value
+        ' Récupérer le récapitulatif des forçages pour le code gestionnaire du formulaire conseiller
+        RecupererRecapForcages txtCodeGestionnaire.Value
+        
+        ' Ajouter des valeurs par défaut si les champs sont vides
+        If Len(txtMontantAutorisation.Value) = 0 Then
+            txtMontantAutorisation.Value = "0"
+        End If
+        If Len(txtDateValidite.Value) = 0 Then
+            txtDateValidite.Value = "01/01/1900"
+        End If
+    End If
+End Sub
+
+Private Sub RecupererDonneesParNumCompteClient(NumCompteClient As String)
+    On Error GoTo ErrorHandler
+
+    ' Définir la chaîne de connexion à la base de données Access
+    Dim conn As Object
+    Dim rs As Object
+    Dim connectionString As String
+    Dim query As String
+    
+    connectionString = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=C:\Users\user\OneDrive\Desktop\Forcage\DemandesForcage.accdb;" ' Remplacez par le chemin correct
+
+    ' Créer la connexion et le Recordset
+    Set conn = CreateObject("ADODB.Connection")
+    Set rs = CreateObject("ADODB.Recordset")
+
+    ' Ouvrir la connexion
+    conn.Open connectionString
+
+    ' Définir la requête SQL pour sélectionner les données par Numéro de Compte Client
+    query = "SELECT * FROM Balance WHERE [Numero Compte] = '" & NumCompteClient & "'"
+
+    ' Ouvrir le Recordset
+    rs.Open query, conn, 1, 3 ' 1 = adOpenKeyset, 3 = adLockOptimistic
+
+    ' Remplir les champs si des données sont trouvées
+    If Not rs.EOF Then
+        txtCodeGestionnaire.Value = rs.Fields("#CCL").Value
+        txtNomGestionnaire.Value = rs.Fields("Nom du gestionnaire").Value
+        txtCodeClient.Value = rs.Fields("Code client").Value
+        txtNomClient.Value = rs.Fields("Nom complet du client").Value
+        txtMontantAutorisation.Value = IIf(IsNull(rs.Fields("Montant autorisation").Value), "", FormatNumber(rs.Fields("Montant autorisation").Value, 2))
+        txtDateValidite.Value = IIf(IsNull(rs.Fields("Date de fin d'autorisation").Value), "", rs.Fields("Date de fin d'autorisation").Value)
+    Else
+        MsgBox "Aucune donnée trouvée pour ce numéro de compte.", vbInformation
+    End If
+
+    ' Fermer le Recordset et la connexion
+    rs.Close
+    conn.Close
+
+    ' Libérer les objets
+    Set rs = Nothing
+    Set conn = Nothing
+    Exit Sub
+
+ErrorHandler:
+    MsgBox "Erreur lors de la connexion à la base de données : " & Err.Description, vbCritical
+    If Not conn Is Nothing Then
+        conn.Close
+        Set conn = Nothing
+    End If
+    Set rs = Nothing
+End Sub
+
+Private Sub CalculerDepassement()
+    Dim MontantAutorisation As Double
+    Dim SoldeActuel As Double
+    Dim MontantForcage As Double
+    Dim SoldePostForcage As Double
+    Dim MontantDepassement As Double
+    Dim PourcentageDepassement As Double
+
+    ' Vérifier que les champs sont des valeurs numériques
+    If IsNumeric(txtSoldeActuel.Value) And IsNumeric(txtMontantForcage.Value) Then
+        SoldeActuel = CDbl(txtSoldeActuel.Value)
+        MontantForcage = CDbl(txtMontantForcage.Value)
+
+        ' Calculer le solde post forçage
+        SoldePostForcage = SoldeActuel - MontantForcage
+        txtSoldePostForcage.Value = FormatNumber(SoldePostForcage, 2)
+
+        ' Calculer le montant de dépassement
+        If IsNumeric(txtMontantAutorisation.Value) And Len(txtMontantAutorisation.Value) > 0 Then
+            MontantAutorisation = CDbl(txtMontantAutorisation.Value)
+            MontantDepassement = -WorksheetFunction.Min(0, SoldePostForcage + MontantAutorisation)
+            ' Calculer le pourcentage de dépassement
+            If MontantAutorisation <> 0 Then
+                PourcentageDepassement = (-MontantDepassement / MontantAutorisation) * 100
+                txtPourcentageDepassement.Value = FormatNumber(-PourcentageDepassement, 2) & "%"
+            Else
+                txtPourcentageDepassement.Value = "0%"
+            End If
+        Else
+            MontantDepassement = -WorksheetFunction.Min(0, SoldePostForcage)
+            txtPourcentageDepassement.Value = "0%"
+        End If
+
+        txtMontantDepassement.Value = FormatNumber(MontantDepassement, 2)
+    End If
+End Sub
+
+Private Sub CalculerDureeIrregularite()
+    If IsDate(txtDateDemande.Value) And IsDate(txtDateRegularisation.Value) Then
+        txtDureeIrregularite.Value = DateDiff("d", CDate(txtDateDemande.Value), CDate(txtDateRegularisation.Value))
+    Else
+        txtDureeIrregularite.Value = 0
+    End If
+End Sub
+
+Private Sub txtDateRegularisation_AfterUpdate()
+    CalculerDureeIrregularite
+End Sub
+
+Private Sub cmdSubmitConseiller_Click()
+    On Error GoTo ErrorHandler
+
+    ' Définir la chaîne de connexion à la base de données Access
+    Dim conn As Object
+    Dim cmd As Object
+    Dim rs As Object
+    Dim connectionString As String
+    Dim dernierID As Long
+    Dim celluleEmail As String
+    
+    connectionString = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=C:\Users\user\OneDrive\Desktop\Forcage\DemandesForcage.accdb;" ' Remplacez par le chemin correct
+
+    ' Créer la connexion et la commande
+    Set conn = CreateObject("ADODB.Connection")
+    Set cmd = CreateObject("ADODB.Command")
+    Set rs = CreateObject("ADODB.Recordset")
+
+    ' Ouvrir la connexion
+    conn.Open connectionString
+    cmd.ActiveConnection = conn
+
+    ' Définir la commande SQL pour insérer les données
+    cmd.CommandText = "INSERT INTO DemandesForcage (DateDemande, NumCompteClient, CodeGestionnaire, NomGestionnaire, CodeClient, NomClient, MontantAutorisation, SoldeActuel, MontantForcage, SoldePostForcage, MontantDepassement, PourcentageDepassement, DateValidite, PromesseRegularisation, DateRegularisation, RepresentantClient, Commentaires, TypeOperation, DureeIrregularite) " & _
+                      "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+
+    ' Ajouter les paramètres avec des vérifications et des valeurs par défaut
+    cmd.Parameters.Append cmd.CreateParameter("DateDemande", 7, 1, , CDate(txtDateDemande.Value))
+    cmd.Parameters.Append cmd.CreateParameter("NumCompteClient", 200, 1, 255, CStr(txtNumCompteClient.Value))
+    cmd.Parameters.Append cmd.CreateParameter("CodeGestionnaire", 200, 1, 255, CStr(txtCodeGestionnaire.Value))
+    cmd.Parameters.Append cmd.CreateParameter("NomGestionnaire", 200, 1, 255, CStr(txtNomGestionnaire.Value))
+    cmd.Parameters.Append cmd.CreateParameter("CodeClient", 200, 1, 255, CStr(txtCodeClient.Value))
+    cmd.Parameters.Append cmd.CreateParameter("NomClient", 200, 1, 255, CStr(txtNomClient.Value))
+    cmd.Parameters.Append cmd.CreateParameter("MontantAutorisation", 5, 1, , IIf(IsNumeric(txtMontantAutorisation.Value) And Len(txtMontantAutorisation.Value) > 0, CDbl(txtMontantAutorisation.Value), 0))
+    cmd.Parameters.Append cmd.CreateParameter("SoldeActuel", 5, 1, , CDbl(txtSoldeActuel.Value))
+    cmd.Parameters.Append cmd.CreateParameter("MontantForcage", 5, 1, , CDbl(txtMontantForcage.Value))
+    cmd.Parameters.Append cmd.CreateParameter("SoldePostForcage", 5, 1, , CDbl(txtSoldePostForcage.Value))
+    cmd.Parameters.Append cmd.CreateParameter("MontantDepassement", 5, 1, , CDbl(txtMontantDepassement.Value))
+    cmd.Parameters.Append cmd.CreateParameter("PourcentageDepassement", 200, 1, 255, CStr(txtPourcentageDepassement.Value))
+    cmd.Parameters.Append cmd.CreateParameter("DateValidite", 7, 1, , IIf(IsDate(txtDateValidite.Value) And Len(txtDateValidite.Value) > 0, CDate(txtDateValidite.Value), Null))
+    cmd.Parameters.Append cmd.CreateParameter("PromesseRegularisation", 200, 1, 255, CStr(txtPromesseRegularisation.Value))
+    cmd.Parameters.Append cmd.CreateParameter("DateRegularisation", 7, 1, , CDate(txtDateRegularisation.Value))
+    cmd.Parameters.Append cmd.CreateParameter("RepresentantClient", 200, 1, 255, CStr(txtRepresentantClient.Value))
+    cmd.Parameters.Append cmd.CreateParameter("Commentaires", 201, 1, 255, CStr(txtCommentaires.Value))
+    cmd.Parameters.Append cmd.CreateParameter("TypeOperation", 200, 1, 255, CStr(cmbTypeOperation.Value))
+    cmd.Parameters.Append cmd.CreateParameter("DureeIrregularite", 3, 1, , CLng(txtDureeIrregularite.Value))
+
+    ' Exécuter la commande
+    cmd.Execute
+
+    ' Récupérer le dernier ID inséré
+    rs.Open "SELECT @@IDENTITY", conn
+    If Not rs.EOF Then
+        dernierID = rs.Fields(0).Value
+    End If
+    rs.Close
+
+    ' Envoi de la notification par email à la cellule de forçage
+    celluleEmail = "komlamartinchokki@outlook.com" ' Remplacez par l'adresse email réelle
+
+    Dim recap As String
+    recap = FormatRecapDemandeConseillerHTML(dernierID, txtDateDemande.Value, txtNumCompteClient.Value, txtCodeGestionnaire.Value, txtNomGestionnaire.Value, txtCodeClient.Value, txtNomClient.Value, txtMontantAutorisation.Value, txtSoldeActuel.Value, txtMontantForcage.Value, txtSoldePostForcage.Value, txtMontantDepassement.Value, txtPourcentageDepassement.Value, txtDateValidite.Value, txtPromesseRegularisation.Value, txtDateRegularisation.Value, txtRepresentantClient.Value, txtCommentaires.Value, cmbTypeOperation.Value, txtDureeIrregularite.Value)
+    Call SendEmailHTML(celluleEmail, "Nouvelle demande de forçage reçue - " & txtNomClient.Value & "", recap, "komlamartinchokki@outlook.com")
+    
+    ' Confirmation
+    MsgBox "Demande de forçage soumise avec succès et notifications envoyées!", vbInformation
+    Unload Me
+
+    ' Fermer la connexion
+    conn.Close
+
+    ' Libérer les objets
+    Set cmd = Nothing
+    Set conn = Nothing
+    Set rs = Nothing
+
+    Exit Sub
+
+ErrorHandler:
+    MsgBox "Erreur lors de la soumission des données : " & Err.Description, vbCritical
+    If Not conn Is Nothing Then
+        conn.Close
+        Set conn = Nothing
+    End If
+    Set cmd = Nothing
+    Set rs = Nothing
+End Sub
+
+Private Sub txtMontantAutorisation_AfterUpdate()
+    CalculerDepassement
+End Sub
+
+Private Sub txtSoldeActuel_AfterUpdate()
+    CalculerDepassement
+End Sub
+
+Private Sub txtMontantForcage_AfterUpdate()
+    CalculerDepassement
+End Sub
+
+Private Sub txtMontantAutorisation_Exit(ByVal Cancel As MSForms.ReturnBoolean)
+    If IsNumeric(txtMontantAutorisation.Value) Then
+        txtMontantAutorisation.Value = FormatNumber(txtMontantAutorisation.Value, 2)
+    End If
+End Sub
+
+Private Sub txtSoldeActuel_Exit(ByVal Cancel As MSForms.ReturnBoolean)
+    If IsNumeric(txtSoldeActuel.Value) Then
+        txtSoldeActuel.Value = FormatNumber(txtSoldeActuel.Value, 2)
+    End If
+End Sub
+
+Private Sub txtMontantForcage_Exit(ByVal Cancel As MSForms.ReturnBoolean)
+    If IsNumeric(txtMontantForcage.Value) Then
+        txtMontantForcage.Value = FormatNumber(txtMontantForcage.Value, 2)
+    End If
+End Sub
+
+Private Sub txtSoldePostForcage_Exit(ByVal Cancel As MSForms.ReturnBoolean)
+    If IsNumeric(txtSoldePostForcage.Value) Then
+        txtSoldePostForcage.Value = FormatNumber(txtSoldePostForcage.Value, 2)
+    End If
+End Sub
+
+Private Sub txtMontantDepassement_Exit(ByVal Cancel As MSForms.ReturnBoolean)
+    If IsNumeric(txtMontantDepassement.Value) Then
+        txtMontantDepassement.Value = FormatNumber(txtMontantDepassement.Value, 2)
+    End If
+End Sub
+
+Private Sub SendEmailHTML(toAddress As String, Subject As String, Body As String, Optional ccAddress As String = "")
+    Dim OutlookApp As Object
+    Dim OutlookMail As Object
+
+    Set OutlookApp = CreateObject("Outlook.Application")
+    Set OutlookMail = OutlookApp.CreateItem(0)
+
+    With OutlookMail
+        .To = toAddress
+        .CC = ccAddress
+        .Subject = Subject
+        .HTMLBody = Body
+        .Send
+    End With
+
+    Set OutlookMail = Nothing
+    Set OutlookApp = Nothing
+End Sub
+
