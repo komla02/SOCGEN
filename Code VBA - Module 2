@@ -1,0 +1,202 @@
+' Module1
+Private Sub SendEmailHTML(toAddress As String, Subject As String, Body As String, Optional ccAddress As String = "")
+    Dim OutlookApp As Object
+    Dim OutlookMail As Object
+
+    Set OutlookApp = CreateObject("Outlook.Application")
+    Set OutlookMail = OutlookApp.CreateItem(0)
+
+    With OutlookMail
+        .To = toAddress
+        .CC = ccAddress
+        .Subject = Subject
+        .HTMLBody = Body
+        .Send
+    End With
+
+    Set OutlookMail = Nothing
+    Set OutlookApp = Nothing
+End Sub
+
+Function FormatRecapDemandeConseiller(DateDemande As String, NumCompteClient As String, NomClient As String, MontantAutorisation As Double, SoldeActuel As Double, MontantForcage As Double, SoldePostForcage As Double, MontantDepassement As Double, PourcentageDepassement As String, DateValidite As String, PromesseRegularisation As String, DateRegularisation As String, RepresentantClient As String, Commentaires As String) As String
+    Dim recap As String
+    recap = recap & "Date de la Demande: " & DateDemande & vbCrLf
+    recap = recap & "Numéro de Compte Client: " & NumCompteClient & vbCrLf
+    recap = recap & "Nom Client: " & NomClient & vbCrLf
+    recap = recap & "Montant Autorisation: " & FormatNumber(MontantAutorisation, 2) & vbCrLf
+    recap = recap & "Solde Actuel: " & FormatNumber(SoldeActuel, 2) & vbCrLf
+    recap = recap & "Montant Forcage: " & FormatNumber(MontantForcage, 2) & vbCrLf
+    recap = recap & "Solde Post Forcage: " & FormatNumber(SoldePostForcage, 2) & vbCrLf
+    recap = recap & "Montant Dépassement: " & FormatNumber(MontantDepassement, 2) & vbCrLf
+    recap = recap & "Pourcentage Dépassement: " & PourcentageDepassement & vbCrLf
+    recap = recap & "Date Validité: " & DateValidite & vbCrLf
+    recap = recap & "Promesse Régularisation: " & PromesseRegularisation & vbCrLf
+    recap = recap & "Date Régularisation: " & DateRegularisation & vbCrLf
+    recap = recap & "Représentant Client: " & RepresentantClient & vbCrLf
+    recap = recap & "Commentaires: " & Commentaires
+    FormatRecapDemandeConseiller = recap
+End Function
+
+
+Function FormatRecapDemandeComplete(DateDemande As Date, NumCompteClient As String, CodeGestionnaire As String, NomGestionnaire As String, CodeClient As String, NomClient As String, MontantAutorisation As Double, SoldeActuel As Double, MontantForcage As Double, SoldePostForcage As Double, MontantDepassement As Double, PourcentageDepassement As Double, DateValidite As Date, PromesseRegularisation As String, DateRegularisation As Date, RepresentantClient As String, Commentaires As String, Rating As String, Staging As String, TypeForcage As String, NatureEngagementIrregulier As String, NiveauValidation As String, Status As String) As String
+    Dim recap As String
+    recap = "Date de la Demande: " & DateDemande & vbCrLf & _
+            "Numéro de Compte Client: " & NumCompteClient & vbCrLf & _
+            "Code Gestionnaire: " & CodeGestionnaire & vbCrLf & _
+            "Nom Gestionnaire: " & NomGestionnaire & vbCrLf & _
+            "Code Client: " & CodeClient & vbCrLf & _
+            "Nom Client: " & NomClient & vbCrLf & _
+            "Montant Autorisation: " & MontantAutorisation & vbCrLf & _
+            "Solde Actuel: " & SoldeActuel & vbCrLf & _
+            "Montant Forcage: " & MontantForcage & vbCrLf & _
+            "Solde Post Forcage: " & SoldePostForcage & vbCrLf & _
+            "Montant Dépassement: " & MontantDepassement & vbCrLf & _
+            "Pourcentage Dépassement: " & PourcentageDepassement & "%" & vbCrLf & _
+            "Date Validité: " & DateValidite & vbCrLf & _
+            "Promesse Régularisation: " & PromesseRegularisation & vbCrLf & _
+            "Date Régularisation: " & DateRegularisation & vbCrLf & _
+            "Représentant Client: " & RepresentantClient & vbCrLf & _
+            "Commentaires: " & Commentaires & vbCrLf & _
+            "Rating: " & Rating & vbCrLf & _
+            "Staging: " & Staging & vbCrLf & _
+            "Type de Forçage: " & TypeForcage & vbCrLf & _
+            "Nature de l'engagement irrégulier: " & NatureEngagementIrregulier & vbCrLf & _
+            "Niveau de Validation: " & NiveauValidation & vbCrLf & _
+            "Status: " & Status
+    FormatRecapDemandeComplete = recap
+End Function
+
+Function FormatRecapDemandeConseillerHTML(ID As Long, DateDemande As String, NumCompteClient As String, CodeGestionnaire As String, NomGestionnaire As String, CodeClient As String, NomClient As String, MontantAutorisation As Double, SoldeActuel As Double, MontantForcage As Double, SoldePostForcage As Double, MontantDepassement As Double, PourcentageDepassement As String, DateValidite As String, PromesseRegularisation As String, DateRegularisation As String, RepresentantClient As String, Commentaires As String, TypeOperation As String, DureeIrregularite As String) As String
+    
+    Dim MontantAutoStr As String
+    Dim DateValiditeStr As String
+    
+    ' Vérifier et formater les valeurs
+    If MontantAutorisation = 0 Then
+        MontantAutoStr = "SANS AUTO"
+    Else
+        MontantAutoStr = FormatNumber(MontantAutorisation, 2)
+    End If
+    
+    If DateValidite = "01/01/1900" Then
+        DateValiditeStr = "PAS DVA"
+    Else
+        DateValiditeStr = DateValidite
+    End If
+    
+    FormatRecapDemandeConseillerHTML = "<html><body>" & _
+        "<p>Bonjour,</p>" & _
+        "<p>Une nouvelle demande de forçage (ID: " & ID & ") a été envoyée par " & NomGestionnaire & ".</p>" & _
+        "<table border='1'>" & _
+        "<tr><td>Date de la Demande</td><td>" & DateDemande & "</td></tr>" & _
+        "<tr><td>Code Gestionnaire</td><td>" & CodeGestionnaire & "</td></tr>" & _
+        "<tr><td>Nom Gestionnaire</td><td>" & NomGestionnaire & "</td></tr>" & _
+        "<tr><td>Numéro de Compte Client</td><td>" & NumCompteClient & "</td></tr>" & _
+        "<tr><td>Nom Client</td><td>" & NomClient & "</td></tr>" & _
+        "<tr><td>Montant Autorisation</td><td><b>" & MontantAutoStr & "</b></td></tr>" & _
+        "<tr><td>Solde Actuel</td><td><b>" & FormatNumber(SoldeActuel, 2) & "</b></td></tr>" & _
+        "<tr><td>Montant Forcage</td><td><b>" & FormatNumber(MontantForcage, 2) & "</b></td></tr>" & _
+        "<tr><td>Solde Post Forcage</td><td><b>" & FormatNumber(SoldePostForcage, 2) & "</b></td></tr>" & _
+        "<tr><td>Montant Dépassement</td><td><b>" & FormatNumber(MontantDepassement, 2) & "</b></td></tr>" & _
+        "<tr><td>Pourcentage Dépassement</td><td><b>" & PourcentageDepassement & "</b></td></tr>" & _
+        "<tr><td>Date Validité</td><td>" & DateValiditeStr & "</td></tr>" & _
+        "<tr><td>Promesse Régularisation</td><td>" & PromesseRegularisation & "</td></tr>" & _
+        "<tr><td>Date Régularisation</td><td>" & DateRegularisation & "</td></tr>" & _
+        "<tr><td>Durée Irrégularité</td><td><b>" & DureeIrregularite & " jours</b></td></tr>" & _
+        "<tr><td>Représentant Client</td><td>" & RepresentantClient & "</td></tr>" & _
+        "<tr><td>Type d'Operation</td><td>" & TypeOperation & "</td></tr>" & _
+        "<tr><td>Commentaires</td><td>" & Commentaires & "</td></tr>" & _
+        "</table></body></html>"
+End Function
+
+
+Function FormatRecapDemandeCompleteHTML(ID As Long, DateDemande As String, NumCompteClient As String, CodeGestionnaire As String, NomGestionnaire As String, CodeClient As String, NomClient As String, MontantAutorisation As Double, SoldeActuel As Double, MontantForcage As Double, SoldePostForcage As Double, MontantDepassement As Double, PourcentageDepassement As String, DateValidite As String, PromesseRegularisation As String, DateRegularisation As String, RepresentantClient As String, CommentairesCelluleForcage As String, Rating As String, Staging As String, TypeForcage As String, NatureEngagement As String, DureeIrregularite As String, NiveauValidation As String, TypeOperation As String) As String
+    
+    Dim MontantAutoStr As String
+    Dim DateValiditeStr As String
+    
+    ' Vérifier et formater les valeurs
+    If MontantAutorisation = 0 Then
+        MontantAutoStr = "SANS AUTO"
+    Else
+        MontantAutoStr = FormatNumber(MontantAutorisation, 2)
+    End If
+    
+    If DateValidite = "01/01/1900" Then
+        DateValiditeStr = "PAS DVA"
+    Else
+        DateValiditeStr = DateValidite
+    End If
+    
+    FormatRecapDemandeCompleteHTML = "<html><body>" & _
+        "<p>Bonjour,</p>" & _
+        "<p>Une nouvelle demande de forçage du client <b>" & NomClient & "</b> (Staging: <b>" & Staging & "</b> / Gest: <b>" & NomGestionnaire & "</b>), vous a été envoyée pour validation par la cellule forçage. La demande concerne une opération de type <b>" & TypeOperation & "</b>.</p>" & _
+        "<table border='1'>" & _
+        "<tr><td>Nom Client</td><td>" & NomClient & "</td></tr>" & _
+        "<tr><td>Montant Autorisation</td><td><b><span style='background-color: yellow;'>" & MontantAutoStr & "</span></b></td></tr>" & _
+        "<tr><td>Solde Actuel</td><td><b>" & FormatNumber(SoldeActuel, 2) & "</b></td></tr>" & _
+        "<tr><td>Montant Forcage</td><td><b><span style='background-color: yellow;'>" & FormatNumber(MontantForcage, 2) & "</span></b></td></tr>" & _
+        "<tr><td>Solde Post Forcage</td><td><b>" & FormatNumber(SoldePostForcage, 2) & "</b></td></tr>" & _
+        "<tr><td>Montant Dépassement</td><td><b><span style='background-color: yellow;'>" & FormatNumber(MontantDepassement, 2) & "</span></b></td></tr>" & _
+        "<tr><td>Pourcentage Dépassement</td><td><b><span style='background-color: yellow;'>" & PourcentageDepassement & "</span></b></td></tr>" & _
+        "<tr><td>DVA</td><td>" & DateValiditeStr & "</td></tr>" & _
+        "<tr><td>Promesse Régularisation</td><td><b><span style='background-color: yellow;'>" & PromesseRegularisation & "</span></b></td></tr>" & _
+        "<tr><td>Delai de Regularisation</td><td><b>" & DureeIrregularite & " jours</b></td></tr>" & _
+        "<tr><td>Représentant Client Contacté</td><td>" & RepresentantClient & "</td></tr>" & _
+        "<tr><td>Commentaires Cellule Forcage</td><td>" & CommentairesCelluleForcage & "</td></tr>" & _
+        "<tr><td>Rating</td><td>" & Rating & "</td></tr>" & _
+        "<tr><td>Type Forcage</td><td>" & TypeForcage & "</td></tr>" & _
+        "<tr><td>Nature Engagement Irrégulier</td><td><b><span style='background-color: yellow;'>" & NatureEngagement & "</span></b></td></tr>" & _
+        "</table>" & _
+        "<p>Cordialement,</p>" & _
+        "<p><b>La cellule Forçage</b></p>" & _
+        "</body></html>"
+End Function
+
+
+Function DeterminerNatureIrregulier(MontantAutorisation As Double, SoldePostForcage As Double, DateValidite As Date) As String
+    Dim NatureIrregulier As String
+    Dim DateActuelle As Date
+    DateActuelle = Date
+
+    If MontantAutorisation = 0 Then
+        NatureIrregulier = "Sans autorisation"
+    ElseIf DateValidite < DateActuelle Then
+        If SoldePostForcage > MontantAutorisation Then
+            NatureIrregulier = "Dépassement sur auto échue"
+        Else
+            NatureIrregulier = "Autorisation échue"
+        End If
+    Else
+        If SoldePostForcage > MontantAutorisation Then
+            NatureIrregulier = "Dépassement sur auto valide"
+        Else
+            'NatureIrregulier = "Autorisation échue"
+            NatureIrregulier = "Dépassement sur auto valide"
+        End If
+    End If
+
+    DeterminerNatureIrregulier = NatureIrregulier
+End Function
+
+Sub EnvoyerEmail(ByVal adresseDestinataire As String, ByVal sujet As String, ByVal corpsHTML As String)
+    Dim olApp As Object
+    Dim olMail As Object
+    
+    ' Créer les objets Application Outlook et MailItem
+    Set olApp = CreateObject("Outlook.Application")
+    Set olMail = olApp.CreateItem(0) ' 0 représente olMailItem
+    
+    ' Configurer l'email
+    With olMail
+        .To = adresseDestinataire
+        .Subject = sujet
+        .HTMLBody = corpsHTML
+        .Send
+    End With
+    
+    ' Nettoyage
+    Set olMail = Nothing
+    Set olApp = Nothing
+End Sub
+
