@@ -1,0 +1,81 @@
+Private Sub CommandButton1_Click()
+    Dim matricule As String
+    matricule = Me.TextBox1.Text
+    
+    ' Vérifiez que le champ matricule n'est pas vide
+    If matricule = "" Then
+        MsgBox "Veuillez saisir votre numéro matricule", vbExclamation
+        Exit Sub
+    End If
+    
+    ' Récupérer la page correspondante depuis la base de données Access
+    Dim page As String
+    page = GetPageFromMatricule(matricule)
+    
+    ' Vérifier si la page a été trouvée
+    If page = "" Then
+        MsgBox "Numéro matricule non reconnu", vbExclamation
+    Else
+        ' Activer la feuille correspondante
+        Worksheets(page).Visible = xlSheetVisible
+        Worksheets(page).Activate
+    End If
+    
+    ' Vider la zone de texte après utilisation
+    Me.TextBox1.Text = ""
+End Sub
+Private Function GetPageFromMatricule(matricule As String) As String
+    On Error GoTo ErrorHandler
+    
+    ' Définir la chaîne de connexion à la base de données Access
+    Dim conn As Object
+    Dim rs As Object
+    Dim query As String
+    
+    ' Assurez-vous que le matricule est numérique
+    If Not IsNumeric(matricule) Then
+        MsgBox "Le numéro matricule doit être numérique", vbExclamation
+        GetPageFromMatricule = ""
+        Exit Function
+    End If
+    
+    Set conn = CreateObject("ADODB.Connection")
+    Set rs = CreateObject("ADODB.Recordset")
+    
+    conn.Open "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=C:\Users\user\OneDrive\Desktop\Forcage\DemandesForcage.accdb;"
+    
+    ' Définir la requête SQL pour récupérer la page
+    query = "SELECT Page FROM Matricule WHERE Mle = " & matricule
+    
+    ' Ouvrir le Recordset
+    rs.Open query, conn, 1, 3 ' 1 = adOpenKeyset, 3 = adLockOptimistic
+    
+    ' Récupérer la page si une correspondance est trouvée
+    If Not rs.EOF Then
+        If Not IsNull(rs.Fields("Page").Value) Then
+            GetPageFromMatricule = rs.Fields("Page").Value
+        Else
+            GetPageFromMatricule = ""
+        End If
+    Else
+        GetPageFromMatricule = ""
+    End If
+    
+    ' Fermer le Recordset et la connexion
+    rs.Close
+    conn.Close
+    
+    ' Libérer les objets
+    Set rs = Nothing
+    Set conn = Nothing
+    Exit Function
+    
+ErrorHandler:
+    MsgBox "Erreur lors de la récupération de la page : " & Err.Description, vbCritical
+    If Not conn Is Nothing Then
+        conn.Close
+        Set conn = Nothing
+    End If
+    Set rs = Nothing
+    GetPageFromMatricule = ""
+End Function
