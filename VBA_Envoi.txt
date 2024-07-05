@@ -18,7 +18,7 @@ Sub UpdateData()
     Set xlWorksheet = ThisWorkbook.Sheets("Liste")
 
     ' Effacez les anciennes données (en commençant par la deuxième ligne car la première ligne contient les en-têtes)
-    xlWorksheet.Range("A2:C" & xlWorksheet.Cells(xlWorksheet.Rows.Count, 1).End(xlUp).Row).ClearContents
+    xlWorksheet.Range("A2:D" & xlWorksheet.Cells(xlWorksheet.Rows.Count, 1).End(xlUp).Row).ClearContents
 
     ' Commencez à remplir les données à partir de la deuxième ligne
     i = 2
@@ -50,15 +50,17 @@ Sub UpdateData()
                     ' Enregistrez la pièce jointe sur le disque
                     att.SaveAsFile strFileName
 
-                    ' Enregistrez le lien du fichier, l'adresse e-mail et l'objet dans le fichier Excel
+                    ' Enregistrez le lien du fichier, l'adresse e-mail, l'objet et la date de réception dans le fichier Excel
                     xlWorksheet.Cells(i, 1).Value = strFileName
                     xlWorksheet.Cells(i, 2).Value = msg.SenderEmailAddress
                     xlWorksheet.Cells(i, 3).Value = msg.Subject
+                    xlWorksheet.Cells(i, 4).Value = msg.ReceivedTime
 
                     ' Message de débogage pour vérifier les valeurs
                     Debug.Print "Fichier enregistré : " & strFileName
                     Debug.Print "Email : " & msg.SenderEmailAddress
                     Debug.Print "Sujet : " & msg.Subject
+                    Debug.Print "Date : " & msg.ReceivedTime
 
                     i = i + 1
                 End If
