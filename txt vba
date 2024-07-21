@@ -1,0 +1,7 @@
+    ' Définir la requête SQL pour compter les demandes de forçage uniques du client ce mois-ci et obtenir la dernière date de demande
+    query = "SELECT COUNT(*) AS NbDemandes, MAX(DateDemande) AS DerniereDate " & _
+            "FROM (SELECT DISTINCT DemandeForcageID, DateDemande " & _
+                  "FROM ValidationForcage " & _
+                  "WHERE NumCompteClient = '" & NumCompteClient & "' " & _
+                  "AND MONTH(DateDemande) = MONTH(Date()) " & _
+                  "AND YEAR(DateDemande) = YEAR(Date()))"
