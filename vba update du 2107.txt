@@ -1,0 +1,83 @@
+' Fonction pour calculer le nombre de demandes de forçage d'un client au cours du mois et récupérer la dernière date de demande
+Private Function CalculerNombreDemandes(NumCompteClient As String, ByRef DerniereDateDemande As String) As Long
+    On Error GoTo ErrorHandler
+
+    Dim conn As Object
+    Dim rs As Object
+    Dim query As String
+    Dim nombreDemandes As Long
+    Dim derniereDate As Date
+
+    Set conn = GetConnection()
+    Set rs = CreateObject("ADODB.Recordset")
+
+    query = "SELECT COUNT(DISTINCT DemandeForcageID) AS NombreDemandes, MAX(DateDemande) AS DerniereDate " & _
+            "FROM ValidationForcage " & _
+            "WHERE NumCompteClient = '" & NumCompteClient & "' " & _
+            "AND DateDemande >= DateSerial(Year(Date), Month(Date), 1)"
+
+    rs.Open query, conn, 1, 3
+
+    If Not rs.EOF Then
+        nombreDemandes = rs.Fields("NombreDemandes").Value
+        derniereDate = rs.Fields("DerniereDate").Value
+    End If
+
+    DerniereDateDemande = Format(derniereDate, "dd/mm/yyyy")
+    rs.Close
+    CloseConnection conn
+    CalculerNombreDemandes = nombreDemandes
+    Exit Function
+
+ErrorHandler:
+    HandleError err, "Erreur lors du calcul du nombre de demandes de forçage"
+    If Not rs Is Nothing Then rs.Close
+    CloseConnection conn
+    CalculerNombreDemandes = 0
+    DerniereDateDemande = ""
+End Function
+
+Function FormatRecapDemandeCompleteHTML(ID As Long, DateDemande As String, NumCompteClient As String, CodeGestionnaire As String, NomGestionnaire As String, CodeClient As String, NomClient As String, MontantAutorisation As Double, SoldeActuel As Double, MontantForcage As Double, SoldePostForcage As Double, MontantDepassement As Double, PourcentageDepassement As String, DateValidite As String, PromesseRegularisation As String, DateRegularisation As String, RepresentantClient As String, CommentairesCelluleForcage As String, Rating As String, Staging As String, TypeForcage As String, NatureEngagement As String, DureeIrregularite As String, NiveauValidation As String, TypeOperation As String, NombreDemandes As Long, DerniereDateDemande As String) As String
+    
+    Dim MontantAutoStr As String
+    Dim DateValiditeStr As String
+    
+    ' Vérifier et formater les valeurs
+    If MontantAutorisation = 0 Then
+        MontantAutoStr = "SANS AUTO"
+    Else
+        MontantAutoStr = FormatNumber(MontantAutorisation, 2)
+    End If
+    
+    If DateValidite = "01/01/1900" Then
+        DateValiditeStr = "PAS DVA"
+    Else
+        DateValiditeStr = DateValidite
+    End If
+    
+    FormatRecapDemandeCompleteHTML = "<html><body>" & _
+        "<p>Bonjour,</p>" & _
+        "<p>Une nouvelle demande de forçage du client <b>" & NomClient & "</b> (Staging: <b>" & Staging & "</b> / Gest: <b>" & NomGestionnaire & "</b>), vous a été envoyée pour validation par la cellule forçage. La demande concerne une opération de type <b>" & TypeOperation & "</b>.</p>" & _
+        "<table border='1'>" & _
+        "<tr><td>Nom Client</td><td>" & NomClient & "</td></tr>" & _
+        "<tr><td>Montant Autorisation</td><td><b><span style='background-color: yellow;'>" & MontantAutoStr & "</span></b></td></tr>" & _
+        "<tr><td>Solde Actuel</td><td><b>" & FormatNumber(SoldeActuel, 2) & "</b></td></tr>" & _
+        "<tr><td>Montant Forcage</td><td><b><span style='background-color: yellow;'>" & FormatNumber(MontantForcage, 2) & "</span></b></td></tr>" & _
+        "<tr><td>Solde Post Forcage</td><td><b>" & FormatNumber(SoldePostForcage, 2) & "</b></td></tr>" & _
+        "<tr><td>Montant Dépassement</td><td><b><span style='background-color: yellow;'>" & FormatNumber(MontantDepassement, 2) & "</span></b></td></tr>" & _
+        "<tr><td>Pourcentage Dépassement</td><td><b><span style='background-color: yellow;'>" & PourcentageDepassement & "</span></b></td></tr>" & _
+        "<tr><td>DVA</td><td>" & DateValiditeStr & "</td></tr>" & _
+        "<tr><td>Promesse Régularisation</td><td><b><span style='background-color: yellow;'>" & PromesseRegularisation & "</span></b></td></tr>" & _
+        "<tr><td>Delai de Regularisation</td><td><b>" & DureeIrregularite & " jours</b></td></tr>" & _
+        "<tr><td>Représentant Client Contacté</td><td>" & RepresentantClient & "</td></tr>" & _
+        "<tr><td>Commentaires Cellule Forcage</td><td>" & CommentairesCelluleForcage & "</td></tr>" & _
+        "<tr><td>Rating</td><td>" & Rating & "</td></tr>" & _
+        "<tr><td>Type Forcage</td><td>" & TypeForcage & "</td></tr>" & _
+        "<tr><td>Nature Engagement Irrégulier</td><td><b><span style='background-color: yellow;'>" & NatureEngagement & "</span></b></td></tr>" & _
+        "<tr><td>Nombre de Demandes ce Mois</td><td><b>" & NombreDemandes & "</b></td></tr>" & _
+        "<tr><td>Dernière Date de Demande</td><td><b>" & DerniereDateDemande & "</b></td></tr>" & _
+        "</table>" & _
+        "<p>Cordialement,</p>" & _
+        "<p><b>La cellule Forçage</b></p>" & _
+        "</body></html>"
+End Function
