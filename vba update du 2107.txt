@@ -1,41 +1,628 @@
-' Fonction pour calculer le nombre de demandes de forçage d'un client au cours du mois et récupérer la dernière date de demande
-Private Function CalculerNombreDemandes(NumCompteClient As String, ByRef DerniereDateDemande As String) As Long
+Private Sub UserForm_Initialize()
+    ' Fixer la taille du formulaire
+    Me.Width = 800
+    Me.Height = 600
+    
+    ' Empêcher le redimensionnement
+    Me.BorderStyle = fmBorderStyleSingle
+    
+    ' Ajouter les éléments à la liste déroulante TypeForcage
+    With cmbTypeForcage
+        .AddItem "COMMERCIAL"
+        .AddItem "TECHNIQUE"
+        .AddItem "ADMINISTRATIF"
+    End With
+
+    ' Initialiser la liste déroulante des valideurs
+    InitializeValideurDropdown
+    
+    ' Initialiser la liste déroulante des types d'opérations
+    InitializeTypeOperationDropdown cmbTypeOperation
+    ' Autres initialisations...
+End Sub
+
+Private Sub InitializeValideurDropdown()
+    On Error GoTo ErrorHandler
+
+    ' Définir la chaîne de connexion à la base de données Access
+    Dim conn As Object
+    Dim rs As Object
+    Dim connectionString As String
+    Dim query As String
+
+    connectionString = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=C:\Users\user\OneDrive\Desktop\Forcage\Update\DemandesForcage.accdb;" ' Remplacez par le chemin correct
+
+    ' Créer la connexion et le Recordset
+    Set conn = CreateObject("ADODB.Connection")
+    Set rs = CreateObject("ADODB.Recordset")
+
+    ' Ouvrir la connexion
+    conn.Open connectionString
+
+    ' Définir la requête SQL pour sélectionner les valideurs
+    query = "SELECT DISTINCT [Nom et Prenoms] FROM Valideurs ORDER BY [Nom et Prenoms]"
+
+    ' Ouvrir le Recordset
+    rs.Open query, conn, 1, 3 ' 1 = adOpenKeyset, 3 = adLockOptimistic
+
+    ' Ajouter les noms à la liste déroulante
+    Do While Not rs.EOF
+        cmbValideur.AddItem rs.Fields("Nom et Prenoms").Value
+        rs.MoveNext
+    Loop
+
+    ' Fermer le Recordset et la connexion
+    rs.Close
+    conn.Close
+
+    ' Libérer les objets
+    Set rs = Nothing
+    Set conn = Nothing
+    Exit Sub
+
+ErrorHandler:
+    MsgBox "Erreur lors de la connexion à la base de données : " & Err.Description, vbCritical
+    If Not conn Is Nothing Then
+        conn.Close
+        Set conn = Nothing
+    End If
+    Set rs = Nothing
+End Sub
+
+Private Sub InitializeTypeOperationDropdown(cmb As MSForms.ComboBox)
+    On Error GoTo ErrorHandler
+
+    ' Définir la chaîne de connexion à la base de données Access
+    Dim conn As Object
+    Dim rs As Object
+    Dim connectionString As String
+    Dim query As String
+
+    connectionString = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=C:\Users\user\OneDrive\Desktop\Forcage\Update\DemandesForcage.accdb;" ' Remplacez par le chemin correct
+
+    ' Créer la connexion et le Recordset
+    Set conn = CreateObject("ADODB.Connection")
+    Set rs = CreateObject("ADODB.Recordset")
+
+    ' Ouvrir la connexion
+    conn.Open connectionString
+
+    ' Définir la requête SQL pour sélectionner les types d'opérations
+    query = "SELECT DISTINCT [NomOpération] FROM TypeOperation ORDER BY [NomOpération]"
+
+    ' Ouvrir le Recordset
+    rs.Open query, conn, 1, 3 ' 1 = adOpenKeyset, 3 = adLockOptimistic
+
+    ' Vider la liste déroulante
+    cmb.Clear
+
+    ' Ajouter les types d'opérations à la liste déroulante
+    Do While Not rs.EOF
+        cmb.AddItem rs.Fields("NomOpération").Value
+        rs.MoveNext
+    Loop
+
+    ' Fermer le Recordset et la connexion
+    rs.Close
+    conn.Close
+
+    ' Libérer les objets
+    Set rs = Nothing
+    Set conn = Nothing
+    Exit Sub
+
+ErrorHandler:
+    MsgBox "Erreur lors de la récupération des types d'opérations : " & Err.Description, vbCritical
+    If Not conn Is Nothing Then
+        conn.Close
+        Set conn = Nothing
+    End If
+    Set rs = Nothing
+End Sub
+
+Private Sub CalculerNatureIrregulier()
+    Dim MontantAutorisation As Double
+    Dim SoldeActuel As Double
+    Dim MontantForcage As Double
+    Dim SoldePostForcage As Double
+    Dim DateValidite As Date
+    Dim NatureIrregulier As String
+
+    ' Vérifier que les champs sont des valeurs numériques
+    If IsNumeric(txtMontantAutorisation.Value) And IsNumeric(txtSoldeActuel.Value) And IsNumeric(txtMontantForcage.Value) And IsDate(txtDateValidite.Value) Then
+        MontantAutorisation = CDbl(txtMontantAutorisation.Value)
+        SoldeActuel = CDbl(txtSoldeActuel.Value)
+        MontantForcage = CDbl(txtMontantForcage.Value)
+        SoldePostForcage = SoldeActuel + MontantForcage
+        DateValidite = CDate(txtDateValidite.Value)
+        
+        ' Calculer la nature de l'irrégulier
+        NatureIrregulier = DeterminerNatureIrregulier(MontantAutorisation, SoldePostForcage, DateValidite)
+        
+        ' Afficher la nature de l'irrégulier dans le champ txtNatureEngagement
+        txtNatureEngagement.Value = NatureIrregulier
+    End If
+End Sub
+
+Private Sub txtMontantAutorisation_Exit(ByVal Cancel As MSForms.ReturnBoolean)
+    txtMontantAutorisation.Value = FormatNumber(txtMontantAutorisation.Value, 2)
+    CalculerNatureIrregulier
+End Sub
+
+Private Sub txtSoldeActuel_Exit(ByVal Cancel As MSForms.ReturnBoolean)
+    txtSoldeActuel.Value = FormatNumber(txtSoldeActuel.Value, 2)
+    CalculerNatureIrregulier
+End Sub
+
+Private Sub txtMontantForcage_Exit(ByVal Cancel As MSForms.ReturnBoolean)
+    txtMontantForcage.Value = FormatNumber(txtMontantForcage.Value, 2)
+    CalculerNatureIrregulier
+End Sub
+
+Private Sub txtDateValidite_Exit(ByVal Cancel As MSForms.ReturnBoolean)
+    CalculerNatureIrregulier
+End Sub
+
+Private Sub txtID_AfterUpdate()
+    ' Vérifiez que l'ID n'est pas vide
+    If txtID.Value <> "" Then
+        ' Récupérer les données pour l'ID saisi
+        RecupererDonneesParID CInt(txtID.Value)
+    End If
+End Sub
+
+Private Sub RecupererDonneesParID(ID As Integer)
+    On Error GoTo ErrorHandler
+
+    ' Définir la chaîne de connexion à la base de données Access
+    Dim conn As Object
+    Dim rs As Object
+    Dim connectionString As String
+    Dim query As String
+    
+    connectionString = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=C:\Users\user\OneDrive\Desktop\Forcage\Update\DemandesForcage.accdb;" ' Remplacez par le chemin correct
+
+    ' Créer la connexion et le Recordset
+    Set conn = CreateObject("ADODB.Connection")
+    Set rs = CreateObject("ADODB.Recordset")
+
+    ' Ouvrir la connexion
+    conn.Open connectionString
+
+    ' Définir la requête SQL pour sélectionner les données par ID
+    query = "SELECT * FROM DemandesForcage WHERE ID = " & ID
+
+    ' Ouvrir le Recordset
+    rs.Open query, conn, 1, 3 ' 1 = adOpenKeyset, 3 = adLockOptimistic
+
+    ' Remplir les champs si une demande est trouvée
+    If Not rs.EOF Then
+        txtDateDemande.Value = rs.Fields("DateDemande").Value
+        txtNumCompteClient.Value = rs.Fields("NumCompteClient").Value
+        txtCodeGestionnaire.Value = rs.Fields("CodeGestionnaire").Value
+        txtNomGestionnaire.Value = rs.Fields("NomGestionnaire").Value
+        txtCodeClient.Value = rs.Fields("CodeClient").Value
+        txtNomClient.Value = rs.Fields("NomClient").Value
+        txtMontantAutorisation.Value = FormatNumber(rs.Fields("MontantAutorisation").Value, 2)
+        txtSoldeActuel.Value = FormatNumber(rs.Fields("SoldeActuel").Value, 2)
+        txtMontantForcage.Value = FormatNumber(rs.Fields("MontantForcage").Value, 2)
+        txtSoldePostForcage.Value = FormatNumber(rs.Fields("SoldePostForcage").Value, 2)
+        txtMontantDepassement.Value = FormatNumber(rs.Fields("MontantDepassement").Value, 2)
+        txtPourcentageDepassement.Value = rs.Fields("PourcentageDepassement").Value
+        txtDateValidite.Value = rs.Fields("DateValidite").Value
+        txtPromesseRegularisation.Value = rs.Fields("PromesseRegularisation").Value
+        txtDateRegularisation.Value = rs.Fields("DateRegularisation").Value
+        txtDureeIrregularite.Value = rs.Fields("DureeIrregularite").Value
+        txtRepresentantClient.Value = rs.Fields("RepresentantClient").Value
+        cmbTypeOperation.Value = rs.Fields("TypeOperation").Value
+        txtCommentaires.Value = rs.Fields("Commentaires").Value
+        
+        ' Récupérer les données de la table Balance pour Rating et Staging
+        RecupererRatingStaging txtNumCompteClient.Value
+
+        ' Calculer la nature de l'irrégulier après avoir récupéré les données
+        CalculerNatureIrregulier
+    Else
+        MsgBox "Aucune demande trouvée pour cet ID.", vbInformation
+    End If
+
+    ' Fermer le Recordset et la connexion
+    rs.Close
+    conn.Close
+
+    ' Libérer les objets
+    Set rs = Nothing
+    Set conn = Nothing
+    Exit Sub
+
+ErrorHandler:
+    MsgBox "Erreur lors de la connexion à la base de données : " & Err.Description, vbCritical
+    If Not conn Is Nothing Then
+        conn.Close
+        Set conn = Nothing
+    End If
+    Set rs = Nothing
+End Sub
+
+Private Sub RecupererRatingStaging(NumCompteClient As String)
+    On Error GoTo ErrorHandler
+
+    ' Définir la chaîne de connexion à la base de données Access
+    Dim conn As Object
+    Dim rs As Object
+    Dim connectionString As String
+    Dim query As String
+
+    connectionString = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=C:\Users\user\OneDrive\Desktop\Forcage\Update\DemandesForcage.accdb;" ' Remplacez par le chemin correct
+
+    ' Créer la connexion et le Recordset
+    Set conn = CreateObject("ADODB.Connection")
+    Set rs = CreateObject("ADODB.Recordset")
+
+    ' Ouvrir la connexion
+    conn.Open connectionString
+
+    ' Définir la requête SQL pour sélectionner les données par Numéro de Compte Client
+    query = "SELECT Rating, Staging FROM Balance WHERE [Numero Compte] = '" & NumCompteClient & "'"
+
+    ' Ouvrir le Recordset
+    rs.Open query, conn, 1, 3 ' 1 = adOpenKeyset, 3 = adLockOptimistic
+
+    ' Remplir les champs si des données sont trouvées
+    If Not rs.EOF Then
+        txtRating.Value = rs.Fields("Rating").Value
+        txtStaging.Value = rs.Fields("Staging").Value
+    Else
+        MsgBox "Aucune donnée trouvée pour ce numéro de compte dans la table Balance.", vbInformation
+    End If
+
+    ' Fermer le Recordset et la connexion
+    rs.Close
+    conn.Close
+
+    ' Libérer les objets
+    Set rs = Nothing
+    Set conn = Nothing
+    Exit Sub
+
+ErrorHandler:
+    MsgBox "Erreur lors de la récupération des données de la table Balance : " & Err.Description, vbCritical
+    If Not conn Is Nothing Then
+        conn.Close
+        Set conn = Nothing
+    End If
+    Set rs = Nothing
+End Sub
+
+Private Sub cmdSubmitForcage_Click()
+    On Error GoTo ErrorHandler
+
+    ' Vérifiez que l'ID n'est pas vide
+    If txtID.Value = "" Then
+        MsgBox "Veuillez saisir un ID valide.", vbExclamation
+        Exit Sub
+    End If
+
+    ' Définir la chaîne de connexion à la base de données Access
+    Dim conn As Object
+    Dim cmd As Object
+    Dim rs As Object
+    Dim connectionString As String
+
+    connectionString = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=C:\Users\user\OneDrive\Desktop\Forcage\Update\DemandesForcage.accdb;" ' Remplacez par le chemin correct
+
+    ' Créer la connexion et la commande
+    Set conn = CreateObject("ADODB.Connection")
+    Set cmd = CreateObject("ADODB.Command")
+    Set rs = CreateObject("ADODB.Recordset")
+
+    ' Ouvrir la connexion
+    conn.Open connectionString
+    cmd.ActiveConnection = conn
+
+    ' Récupérer les informations du valideur sélectionné
+    Dim valideurNom As String
+    Dim valideurInfo As Collection
+    Dim valideurEmail As String
+    Dim valideurLAD As String
+    valideurNom = cmbValideur.Value
+    Set valideurInfo = GetValideurInfo(valideurNom)
+    valideurEmail = valideurInfo("Email")
+    valideurLAD = valideurInfo("LAD")
+
+    ' Récupérer l'email du conseiller et du RM
+    Dim conseillerEmail As String, emailRM As String, emailACE As String
+    conseillerEmail = GetFieldValue(txtNumCompteClient.Value, "Email CCL")
+    emailRM = GetFieldValue(txtNumCompteClient.Value, "Email RM")
+    emailACE = GetFieldValue(txtNumCompteClient.Value, "Email ACE")
+    
+    ' Récupérer les emails des différents niveaux de LAD depuis la table Valideurs
+    Dim emailCOO As String, emailDCE As String, emailDG As String
+    emailCOO = GetValideurEmailByLAD("COO")
+    emailDCE = GetValideurEmailByLAD("DCE")
+    emailDG = GetValideurEmailByLAD("DG")
+
+    ' Récupérer le code d'opération sélectionné
+    Dim selectedOperation As String
+    selectedOperation = cmbTypeOperation.Value
+
+    ' Définir la commande SQL pour insérer les données dans ValidationForcage
+    cmd.CommandText = "INSERT INTO ValidationForcage (DemandeForcageID, CodeGestionnaire, NomGestionnaire, CodeClient, NomClient, MontantAutorisation, SoldeActuel, MontantForcage, DateValidite, PromesseRegularisation, DateRegularisation, RepresentantClient, Rating, Staging, TypeForcage, NatureEngagementIrregulier, NiveauValidation, CommentairesCelluleForcage, DateDemande, NumCompteClient, SoldePostForcage, MontantDepassement, PourcentageDepassement, Commentaires, DureeIrregularite, TypeOperation) " & _
+                      "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+
+    ' Ajouter les paramètres en s'assurant que les types de données correspondent
+    cmd.Parameters.Append cmd.CreateParameter("DemandeForcageID", 3, 1, , CInt(txtID.Value))
+    cmd.Parameters.Append cmd.CreateParameter("CodeGestionnaire", 200, 1, 255, IIf(Len(txtCodeGestionnaire.Value) > 0, CStr(txtCodeGestionnaire.Value), Null))
+    cmd.Parameters.Append cmd.CreateParameter("NomGestionnaire", 200, 1, 255, IIf(Len(txtNomGestionnaire.Value) > 0, CStr(txtNomGestionnaire.Value), Null))
+    cmd.Parameters.Append cmd.CreateParameter("CodeClient", 200, 1, 255, IIf(Len(txtCodeClient.Value) > 0, CStr(txtCodeClient.Value), Null))
+    cmd.Parameters.Append cmd.CreateParameter("NomClient", 200, 1, 255, IIf(Len(txtNomClient.Value) > 0, CStr(txtNomClient.Value), Null))
+    cmd.Parameters.Append cmd.CreateParameter("MontantAutorisation", 5, 1, , IIf(IsNumeric(txtMontantAutorisation.Value), CDbl(txtMontantAutorisation.Value), Null))
+    cmd.Parameters.Append cmd.CreateParameter("SoldeActuel", 5, 1, , IIf(IsNumeric(txtSoldeActuel.Value), CDbl(txtSoldeActuel.Value), Null))
+    cmd.Parameters.Append cmd.CreateParameter("MontantForcage", 5, 1, , IIf(IsNumeric(txtMontantForcage.Value), CDbl(txtMontantForcage.Value), Null))
+    cmd.Parameters.Append cmd.CreateParameter("DateValidite", 7, 1, , IIf(IsDate(txtDateValidite.Value), CDate(txtDateValidite.Value), Null))
+    cmd.Parameters.Append cmd.CreateParameter("PromesseRegularisation", 200, 1, 255, IIf(Len(txtPromesseRegularisation.Value) > 0, CStr(txtPromesseRegularisation.Value), Null))
+    cmd.Parameters.Append cmd.CreateParameter("DateRegularisation", 7, 1, , IIf(IsDate(txtDateRegularisation.Value), CDate(txtDateRegularisation.Value), Null))
+    cmd.Parameters.Append cmd.CreateParameter("RepresentantClient", 200, 1, 255, IIf(Len(txtRepresentantClient.Value) > 0, CStr(txtRepresentantClient.Value), Null))
+    cmd.Parameters.Append cmd.CreateParameter("Rating", 200, 1, 255, IIf(Len(txtRating.Value) > 0, CStr(txtRating.Value), Null))
+    cmd.Parameters.Append cmd.CreateParameter("Staging", 200, 1, 255, IIf(Len(txtStaging.Value) > 0, CStr(txtStaging.Value), Null))
+    cmd.Parameters.Append cmd.CreateParameter("TypeForcage", 200, 1, 255, IIf(Len(cmbTypeForcage.Value) > 0, CStr(cmbTypeForcage.Value), Null))
+    cmd.Parameters.Append cmd.CreateParameter("NatureEngagementIrregulier", 201, 1, 255, IIf(Len(txtNatureEngagement.Value) > 0, CStr(txtNatureEngagement.Value), Null))
+    cmd.Parameters.Append cmd.CreateParameter("NiveauValidation", 200, 1, 255, IIf(Len(valideurNom) > 0, CStr(valideurNom), Null))
+    cmd.Parameters.Append cmd.CreateParameter("CommentairesCelluleForcage", 201, 1, 255, IIf(Len(txtComForcage.Value) > 0, CStr(txtComForcage.Value), Null))
+    cmd.Parameters.Append cmd.CreateParameter("DateDemande", 7, 1, , IIf(IsDate(txtDateDemande.Value), CDate(txtDateDemande.Value), Null))
+    cmd.Parameters.Append cmd.CreateParameter("NumCompteClient", 200, 1, 255, IIf(Len(txtNumCompteClient.Value) > 0, CStr(txtNumCompteClient.Value), Null))
+    cmd.Parameters.Append cmd.CreateParameter("SoldePostForcage", 5, 1, , IIf(IsNumeric(txtSoldePostForcage.Value), CDbl(txtSoldePostForcage.Value), Null))
+    cmd.Parameters.Append cmd.CreateParameter("MontantDepassement", 5, 1, , IIf(IsNumeric(txtMontantDepassement.Value), CDbl(txtMontantDepassement.Value), Null))
+    cmd.Parameters.Append cmd.CreateParameter("PourcentageDepassement", 200, 1, 255, IIf(Len(txtPourcentageDepassement.Value) > 0, CStr(txtPourcentageDepassement.Value), Null))
+    cmd.Parameters.Append cmd.CreateParameter("Commentaires", 201, 1, 255, IIf(Len(txtCommentaires.Value) > 0, CStr(txtCommentaires.Value), Null))
+    cmd.Parameters.Append cmd.CreateParameter("DureeIrregularite", 3, 1, , IIf(IsNumeric(txtDureeIrregularite.Value), CLng(txtDureeIrregularite.Value), Null))
+    cmd.Parameters.Append cmd.CreateParameter("TypeOperation", 200, 1, 255, IIf(Len(selectedOperation) > 0, CStr(selectedOperation), Null))
+
+    ' Exécuter la commande
+    cmd.Execute
+
+    ' Calculer le nombre de demandes du client et la dernière date de demande
+    Dim NombreDemandes As Long
+    Dim DerniereDateDemande As String
+    CalculerNombreDemandes txtNumCompteClient.Value, NombreDemandes, DerniereDateDemande
+
+    ' Envoi de la notification par email en fonction du LAD
+    Dim ToEmail As String
+    Dim CcEmail As String
+
+    Select Case valideurLAD
+        Case "RM"
+            ToEmail = valideurEmail
+        Case "COO"
+            ToEmail = emailCOO
+            CcEmail = emailRM & ";" & conseillerEmail & ";" & emailACE & ";" & "fatou.faye-n2@socgen.com" & ";" & "Ndeye-Marie.Diaw@socgen.com"
+        Case "DCE"
+            ToEmail = emailDCE
+            CcEmail = emailRM & ";" & emailCOO & ";" & conseillerEmail & ";" & emailACE & ";" & "fatou.faye-n2@socgen.com" & ";" & "Ndeye-Marie.Diaw@socgen.com"
+        Case "DG"
+            ToEmail = emailDG
+            CcEmail = emailDCE & ";" & emailRM & ";" & emailCOO & ";" & conseillerEmail & ";" & emailACE & ";" & "fatou.faye-n2@socgen.com" & ";" & "Ndeye-Marie.Diaw@socgen.com"
+        Case Else
+            MsgBox "LAD non reconnu, envoi de l'email annulé.", vbExclamation
+            Exit Sub
+    End Select
+
+    Dim recap As String
+    recap = FormatRecapDemandeCompleteHTML(CLng(txtID.Value), txtDateDemande.Value, txtNumCompteClient.Value, txtCodeGestionnaire.Value, txtNomGestionnaire.Value, txtCodeClient.Value, txtNomClient.Value, CDbl(txtMontantAutorisation.Value), CDbl(txtSoldeActuel.Value), CDbl(txtMontantForcage.Value), CDbl(txtSoldePostForcage.Value), CDbl(txtMontantDepassement.Value), txtPourcentageDepassement.Value, txtDateValidite.Value, txtPromesseRegularisation.Value, txtDateRegularisation.Value, txtRepresentantClient.Value, txtComForcage.Value, txtRating.Value, txtStaging.Value, CStr(cmbTypeForcage.Value), txtNatureEngagement.Value, txtDureeIrregularite.Value, valideurLAD, selectedOperation, NombreDemandes, DerniereDateDemande)
+    Call SendEmailHTML(ToEmail, "Demande de forçage à valider - " & txtNomClient.Value & " - LAD : " & valideurLAD & " ", recap, CcEmail)
+
+    ' Confirmation
+    MsgBox "Les données ont été soumises avec succès et notification envoyée!", vbInformation
+    Unload Me
+    Exit Sub
+
+ErrorHandler:
+    HandleError Err, "Erreur lors de la soumission des données"
+    If Not conn Is Nothing Then
+        conn.Close
+        Set conn = Nothing
+    End If
+    Set cmd = Nothing
+    Set rs = Nothing
+End Sub
+
+' Fonction pour gérer les erreurs de manière centralisée
+Private Sub HandleError(Err As Object, Optional customMessage As String = "")
+    If customMessage <> "" Then
+        MsgBox customMessage & " : " & Err.Description, vbCritical
+    Else
+        MsgBox "Erreur : " & Err.Description, vbCritical
+    End If
+End Sub
+
+' Fonction pour récupérer la valeur d'un champ spécifique d'une table
+Private Function GetFieldValue(NumCompteClient As String, FieldName As String) As String
     On Error GoTo ErrorHandler
 
     Dim conn As Object
     Dim rs As Object
     Dim query As String
-    Dim nombreDemandes As Long
-    Dim derniereDate As Date
 
     Set conn = GetConnection()
     Set rs = CreateObject("ADODB.Recordset")
 
-    query = "SELECT COUNT(DISTINCT DemandeForcageID) AS NombreDemandes, MAX(DateDemande) AS DerniereDate " & _
-            "FROM ValidationForcage " & _
-            "WHERE NumCompteClient = '" & NumCompteClient & "' " & _
-            "AND DateDemande >= DateSerial(Year(Date), Month(Date), 1)"
-
+    query = "SELECT [" & FieldName & "] FROM Balance WHERE [Numero Compte] = '" & NumCompteClient & "'"
     rs.Open query, conn, 1, 3
 
     If Not rs.EOF Then
-        nombreDemandes = rs.Fields("NombreDemandes").Value
-        derniereDate = rs.Fields("DerniereDate").Value
+        GetFieldValue = rs.Fields(FieldName).Value
+    Else
+        GetFieldValue = ""
     End If
 
-    DerniereDateDemande = Format(derniereDate, "dd/mm/yyyy")
     rs.Close
     CloseConnection conn
-    CalculerNombreDemandes = nombreDemandes
     Exit Function
 
 ErrorHandler:
-    HandleError err, "Erreur lors du calcul du nombre de demandes de forçage"
+    HandleError Err, "Erreur lors de la récupération de la valeur du champ"
     If Not rs Is Nothing Then rs.Close
     CloseConnection conn
-    CalculerNombreDemandes = 0
-    DerniereDateDemande = ""
+    GetFieldValue = ""
 End Function
+
+' Fonction pour récupérer l'email d'un valideur par LAD
+Private Function GetValideurEmailByLAD(LAD As String) As String
+    On Error GoTo ErrorHandler
+
+    Dim conn As Object
+    Dim rs As Object
+    Dim query As String
+
+    Set conn = GetConnection()
+    Set rs = CreateObject("ADODB.Recordset")
+
+    query = "SELECT Emails FROM Valideurs WHERE LAD = '" & LAD & "'"
+    rs.Open query, conn, 1, 3
+
+    If Not rs.EOF Then
+        GetValideurEmailByLAD = rs.Fields("Emails").Value
+    Else
+        GetValideurEmailByLAD = ""
+    End If
+
+    rs.Close
+    CloseConnection conn
+    Exit Function
+
+ErrorHandler:
+    HandleError Err, "Erreur lors de la récupération de l'email du valideur par LAD"
+    If Not rs Is Nothing Then rs.Close
+    CloseConnection conn
+    GetValideurEmailByLAD = ""
+End Function
+
+' Fonction pour récupérer les informations d'un valideur
+Private Function GetValideurInfo(valideurNom As String) As Collection
+    On Error GoTo ErrorHandler
+
+    ' Définir la chaîne de connexion à la base de données Access
+    Dim conn As Object
+    Dim rs As Object
+    Dim connectionString As String
+    Dim query As String
+    Dim valideurInfo As New Collection
+
+    connectionString = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=C:\Users\user\OneDrive\Desktop\Forcage\Update\DemandesForcage.accdb;" ' Remplacez par le chemin correct
+
+    ' Créer la connexion et le Recordset
+    Set conn = CreateObject("ADODB.Connection")
+    Set rs = CreateObject("ADODB.Recordset")
+
+    ' Ouvrir la connexion
+    conn.Open connectionString
+
+    ' Définir la requête SQL pour sélectionner l'email et le LAD du valideur
+    query = "SELECT Emails, LAD FROM Valideurs WHERE [Nom et Prenoms] = '" & valideurNom & "'"
+
+    ' Ouvrir le Recordset
+    rs.Open query, conn, 1, 3 ' 1 = adOpenKeyset, 3 = adLockOptimistic
+
+    ' Récupérer l'email et le LAD
+    If Not rs.EOF Then
+        valideurInfo.Add rs.Fields("Emails").Value, "Email"
+        valideurInfo.Add rs.Fields("LAD").Value, "LAD"
+    Else
+        valideurInfo.Add "", "Email"
+        valideurInfo.Add "", "LAD"
+    End If
+
+    ' Fermer le Recordset et la connexion
+    rs.Close
+    conn.Close
+
+    ' Libérer les objets
+    Set rs = Nothing
+    Set conn = Nothing
+    Set GetValideurInfo = valideurInfo
+    Exit Function
+
+ErrorHandler:
+    MsgBox "Erreur lors de la récupération des informations du valideur : " & Err.Description, vbCritical
+    If Not conn Is Nothing Then
+        conn.Close
+        Set conn = Nothing
+    End If
+    Set rs = Nothing
+    Set GetValideurInfo = Nothing
+End Function
+
+' Fonction pour récupérer la connexion à la base de données
+Private Function GetConnection() As Object
+    Dim conn As Object
+    Set conn = CreateObject("ADODB.Connection")
+    conn.Open "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=C:\Users\user\OneDrive\Desktop\Forcage\Update\DemandesForcage.accdb;"
+    Set GetConnection = conn
+End Function
+
+' Fonction pour fermer la connexion à la base de données
+Private Sub CloseConnection(conn As Object)
+    If Not conn Is Nothing Then
+        conn.Close
+        Set conn = Nothing
+    End If
+End Sub
+
+' Fonction pour envoyer un email HTML
+Sub SendEmailHTML(ToEmail As String, Subject As String, Body As String, CcEmail As String)
+    Dim OutApp As Object
+    Dim OutMail As Object
+
+    Set OutApp = CreateObject("Outlook.Application")
+    Set OutMail = OutApp.CreateItem(0)
+
+    On Error Resume Next
+    With OutMail
+        .To = ToEmail
+        .CC = CcEmail
+        .Subject = Subject
+        .HTMLBody = Body
+        .Send
+    End With
+    On Error GoTo 0
+
+    Set OutMail = Nothing
+    Set OutApp = Nothing
+End Sub
+
+' Fonction pour calculer le nombre de demandes et la dernière date de demande d'un client
+Private Sub CalculerNombreDemandes(NumCompteClient As String, ByRef NombreDemandes As Long, ByRef DerniereDateDemande As String)
+    On Error GoTo ErrorHandler
+
+    Dim conn As Object
+    Dim rs As Object
+    Dim query As String
+
+    Set conn = GetConnection()
+    Set rs = CreateObject("ADODB.Recordset")
+
+    query = "SELECT COUNT(DISTINCT DemandeForcageID) AS NbDemandes, MAX(DateDemande) AS DerniereDate FROM ValidationForcage WHERE NumCompteClient = '" & NumCompteClient & "'"
+    rs.Open query, conn, 1, 3
+
+    If Not rs.EOF Then
+        NombreDemandes = rs.Fields("NbDemandes").Value
+        DerniereDateDemande = rs.Fields("DerniereDate").Value
+    Else
+        NombreDemandes = 0
+        DerniereDateDemande = ""
+    End If
+
+    rs.Close
+    CloseConnection conn
+    Exit Sub
+
+ErrorHandler:
+    HandleError Err, "Erreur lors du calcul du nombre de demandes"
+    If Not rs Is Nothing Then rs.Close
+    CloseConnection conn
+    NombreDemandes = 0
+    DerniereDateDemande = ""
+End Sub
 
 Function FormatRecapDemandeCompleteHTML(ID As Long, DateDemande As String, NumCompteClient As String, CodeGestionnaire As String, NomGestionnaire As String, CodeClient As String, NomClient As String, MontantAutorisation As Double, SoldeActuel As Double, MontantForcage As Double, SoldePostForcage As Double, MontantDepassement As Double, PourcentageDepassement As String, DateValidite As String, PromesseRegularisation As String, DateRegularisation As String, RepresentantClient As String, CommentairesCelluleForcage As String, Rating As String, Staging As String, TypeForcage As String, NatureEngagement As String, DureeIrregularite As String, NiveauValidation As String, TypeOperation As String, NombreDemandes As Long, DerniereDateDemande As String) As String
     
@@ -74,8 +661,8 @@ Function FormatRecapDemandeCompleteHTML(ID As Long, DateDemande As String, NumCo
         "<tr><td>Rating</td><td>" & Rating & "</td></tr>" & _
         "<tr><td>Type Forcage</td><td>" & TypeForcage & "</td></tr>" & _
         "<tr><td>Nature Engagement Irrégulier</td><td><b><span style='background-color: yellow;'>" & NatureEngagement & "</span></b></td></tr>" & _
-        "<tr><td>Nombre de Demandes ce Mois</td><td><b>" & NombreDemandes & "</b></td></tr>" & _
-        "<tr><td>Dernière Date de Demande</td><td><b>" & DerniereDateDemande & "</b></td></tr>" & _
+        "<tr><td>Nombre de demandes ce mois</td><td>" & NombreDemandes & "</td></tr>" & _
+        "<tr><td>Dernière date de demande</td><td>" & DerniereDateDemande & "</td></tr>" & _
         "</table>" & _
         "<p>Cordialement,</p>" & _
         "<p><b>La cellule Forçage</b></p>" & _
