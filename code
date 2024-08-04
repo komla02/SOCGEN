@@ -1,0 +1,52 @@
+SELECT
+    bkheve.dateh,
+    bkheve.dco,
+    bkheve.agsa,
+    bkheve.age,
+    bkheve.ope,
+    bkheve.eve,
+    bkheve.age1,
+    bkheve.dev1,
+    bkheve.ncp1,
+    bkheve.cli1,
+    bkheve.nom1,
+    bkheve.ges1,
+    bkheve.sen1,
+    bkheve.mon1,
+    bkheve.sol1,
+    bkheve.age2,
+    bkheve.dev2,
+    bkheve.ncp2,
+    bkheve.cli2,
+    bkheve.nom2,
+    bkheve.ges2,
+    bkheve.sen2,
+    bkheve.mon2,
+    bkheve.sol2,
+    bkheve.etab,
+    bkheve.guib,
+    bkheve.nome,
+    bkheve.domi,
+    bkheve.etabr,
+    bkheve.guibr,
+    bkheve.comb,
+    bkheve.cleb,
+    bkheve.nomb,
+    bkheve.lib1,
+    bkheve.nump,
+    bkheve.nomp,
+    bkheve.dsai,
+    bkheve.hsai,
+    bkope.lib
+FROM
+    bank.bkheve
+JOIN
+    bank.bkope ON bkheve.ope = bkope.ope
+WHERE
+    bkheve.dateh BETWEEN '2024-06-01' AND '2024-06-30'
+    AND bkheve.ope IN (
+        611, 614, 619, 620, 676, 680, 603, 606, 612, 615, 623, 872, 626, 627, 628, 868, 856, 633, 635, 636, 829, 857, 885, 625, 489, 491, 484, 485, 888, 058, 234, 585, 460, 463, 209, 577, 226, 579, 219, 575, 221, 162, 163, 822, 177, 178, 187, 150, 179, 074, 075, 076, 077, 078, 020, 043, 192, 193, 194, 930, 935, 955, 153, 156, 157, 159, 158, 107
+    )
+    AND bkheve.ges1 IN (
+        'J00', 'H24', '796', '657', '556', '414', '423', '972', '773', '776', 'A25', '648', '282', '774', '524', '660', 'D17', 'D16', '695', '647', '511', '654', '246', '650', '452', '871', '369', '983'
+    );
